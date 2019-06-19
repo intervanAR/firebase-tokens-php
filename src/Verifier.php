@@ -31,17 +31,23 @@ final class Verifier implements Domain\Verifier
     private $signer;
 
     /**
+     * @var array
+     */
+    private $issuers;
+
+    /**
      * @see https://github.com/firebase/firebase-admin-dotnet/pull/29
      *
      * @var int
      */
     private $leewayInSeconds = 300;
 
-    public function __construct(string $projectId, KeyStore $keys = null, Signer $signer = null)
+    public function __construct(string $projectId, KeyStore $keys = null, Signer $signer = null, array $issuers = null)
     {
         $this->projectId = $projectId;
         $this->keys = $keys ?? new HttpKeyStore();
         $this->signer = $signer ?? new Sha256();
+        $this->issuers = $issuers ?? array(sprintf('https://securetoken.google.com/%s', $this->projectId));
     }
 
     public function verifyIdToken($token): Token
@@ -54,7 +60,8 @@ final class Verifier implements Domain\Verifier
 
         try {
             $this->verifyExpiry($token);
-            $this->verifyAuthTime($token);
+            // commented to work with accounts.google.com too
+            // $this->verifyAuthTime($token);3
             $this->verifyIssuedAt($token);
             $this->verifyIssuer($token);
         } catch (\Throwable $e) {
@@ -113,7 +120,7 @@ final class Verifier implements Domain\Verifier
             throw new InvalidToken($token, 'The claim "iss" is missing.');
         }
 
-        if ($token->getClaim('iss') !== sprintf('https://securetoken.google.com/%s', $this->projectId)) {
+        if (!in_array($token->getClaim('iss'), $this->issuers)) {
             throw new InvalidToken($token, 'This token has an invalid issuer.');
         }
     }

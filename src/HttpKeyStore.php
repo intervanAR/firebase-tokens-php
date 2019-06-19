@@ -26,10 +26,16 @@ final class HttpKeyStore implements KeyStore
      */
     private $cache;
 
-    public function __construct(ClientInterface $client = null, CacheInterface $cache = null)
+    /**
+     * @var array
+     */
+    private $keysUrls;
+
+    public function __construct(ClientInterface $client = null, CacheInterface $cache = null, array $keysUrls = null)
     {
         $this->client = $client ?? new Client();
         $this->cache = $cache ?? new InMemoryCache();
+        $this->keysUrls = $keysUrls ?? array(KEYS_URL);
     }
 
     public function get($keyId)
@@ -38,11 +44,17 @@ final class HttpKeyStore implements KeyStore
             return $key;
         }
 
-        $response = $this->client->request(RequestMethod::METHOD_GET, self::KEYS_URL);
-        $keys = json_decode((string) $response->getBody(), true);
+        foreach ($this->keysUrls as $keysUrl) {
+            $response = $this->client->request(RequestMethod::METHOD_GET, $keysUrl);
+            $keys = json_decode((string) $response->getBody(), true);
+            if (isset($keys[$keyId]) ) {
+                $key = $keys[$keyId];
+                break;
+            }
+        }
 
-        if (!($key = $keys[$keyId] ?? null)) {
-            throw new \OutOfBoundsException(sprintf('Key with ID "%s" not found.', $keyId));
+        if (!$key) {
+            throw new \OutOfBoundsException(sprintf('Key not found.'));
         }
 
         $ttl = preg_match('/max-age=(\d+)/i', $response->getHeaderLine('Cache-Control') ?? '', $matches)
