@@ -6,3 +6,5 @@
 /phpunit.xml
 
 /tests/credentials.json
+
+.idea

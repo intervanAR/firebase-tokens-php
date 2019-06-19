@@ -35,7 +35,7 @@ final class HttpKeyStore implements KeyStore
     {
         $this->client = $client ?? new Client();
         $this->cache = $cache ?? new InMemoryCache();
-        $this->keysUrls = $keysUrls ?? array(KEYS_URL);
+        $this->keysUrls = $keysUrls ?? array(self::KEYS_URL);
     }
 
     public function get($keyId)
